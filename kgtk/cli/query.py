@@ -81,6 +81,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="alias name to be used for preceding input")
     parser.add_argument('--comment', default=None, action=InputOptionAction, dest='comment',
                         help="comment string to store for the preceding input (displayed by --show-cache)")
+    parser.add_argument('--reuse-only', action=InputOptionAction, dest='reuse_only', type=bool, nargs=0,
+                        help="reuse an existing graph in the cache, do not add or replace it")
     # future extension:
     #parser.add_argument('--in-memory', default=False, type=bool, nargs=0, action=InputOptionAction, dest='in_memory',
     #                    help="load the preceding input into a temporary in-memory table only")
@@ -225,7 +227,8 @@ def run(input_files: KGTKFiles,
                                       limit=options.get('limit'),
                                       parameters=parameters,
                                       index=options.get('index'),
-                                      force=options.get('force'))
+                                      force=options.get('force'),
+                                      reuse_only=options.get('reuse_only'))
             
             explain = options.get('explain')
             if explain is not None:

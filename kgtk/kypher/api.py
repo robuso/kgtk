@@ -80,6 +80,7 @@ class KypherQuery(object):
                 parameters={},
                 force=False,
                 index=None, loglevel=None,
+                reuse_only=False
                 **kwargs):
         """Internal constructor which generates a cached query translation and a
         LRU-cachable results structure (if requested).  See 'KypherApi.get_query'
@@ -93,7 +94,7 @@ class KypherQuery(object):
         norm_inputs = []
         for inp in inputs:
             if self.api.get_input_info(inp) is None:
-                self.api.add_input(inp)
+                self.api.add_input(inp, reuse_only=reuse_only)
             norm_inputs.append(self.api.get_input(inp))
         inputs = norm_inputs
 
@@ -459,7 +460,7 @@ class KypherApi(object):
         """
         return self.inputs.get(name)
 
-    def add_input(self, file, alias=None, name=None, handle=False, load=False):
+    def add_input(self, file, alias=None, name=None, handle=False, load=False, reuse_only=False):
         """Add input 'file' as one of the input files known by this API instance.
 
         If 'alias' is not None, use it as the name of input inside the graph cache
@@ -494,7 +495,7 @@ class KypherApi(object):
         if load or info.get('alias') is not None:
             # we have to preload if we use a DB alias, otherwise a rerun of a cached query will fail:
             store = self.get_sql_store()
-            store.add_graph(file, alias=info.get('alias'))
+            store.add_graph(file, alias=info.get('alias'), reuse_only=reuse_only)
         # clear query caches to avoid any file/alias confusions in cached queries:
         self.clear_caches()
 

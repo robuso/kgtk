@@ -671,7 +671,7 @@ class SqliteStore(SqlStore):
                 return table
             graphid += 1
 
-    def determine_graph_action(self, file, alias=None, error=True):
+    def determine_graph_action(self, file, alias=None, error=True, reuse_only=False):
         """Determine which action to perform for the KGTK graph indicated by input 'file' (or 'alias').
         Returns one of 'add', 'replace', 'reuse' or 'error'.  Raises an exception for error cases in
         case 'error' was set to True (the default).
@@ -689,6 +689,9 @@ class SqliteStore(SqlStore):
         whose properties do not match what was previously loaded, or if 'file' names standard input.
         If so an obsolete graph table for 'file' will have to be removed before new data gets imported.
 
+        If 'reuse_only' is True, then reuse a file in the cache if possible, and otherwise return
+        'error' or raise an exception.
+
         Checks for errors such as invalid alias names, aliases that are already in use for other
         inputs, and cases where an existing file might conflict with an existing input alias.
         """
@@ -700,6 +703,11 @@ class SqliteStore(SqlStore):
         
         info = self.get_file_info(file, alias=alias)
         if info is None:
+            if reuse_only:
+                if error:
+                    raise KGTKException(f'cannot reuse unknown file {file}')
+                else:
+                    return 'error'
             return 'add'
         
         is_aliased = self.is_input_alias_name(info.file)
@@ -714,9 +722,14 @@ class SqliteStore(SqlStore):
         
         if self.is_standard_input(file):
             # we never reuse plain stdin, it needs to be aliased to a new name for that:
+            if reuse_only:
+                if error:
+                    raise KGTKException(f'stdin may not be reused')
+                else:
+                    return 'error'
             return 'replace'
         
-        if os.path.exists(file):
+        if not reuse_only and os.path.exists(file):
             if is_aliased and not defines_alias:
                 if error:
                     raise KGTKException(f"input '{file}' conflicts with existing alias; "+
@@ -730,17 +743,17 @@ class SqliteStore(SqlStore):
             # don't check md5sum for now
         return 'reuse'
 
-    def has_graph(self, file, alias=None):
+    def has_graph(self, file, alias=None, reuse_only=False):
         """Return True if the KGTK graph represented/named by 'file' (or its 'alias' if not None)
         has already been imported and is up-to-date (see 'determine_graph_action' for the full story).
         """
-        return self.determine_graph_action(file, alias=alias, error=False) == 'reuse'
+        return self.determine_graph_action(file, alias=alias, error=False, reuse_only=reuse_only) == 'reuse'
 
-    def add_graph(self, file, alias=None):
+    def add_graph(self, file, alias=None, reuse_only=False):
         """Import a graph from 'file' (and optionally named by 'alias') unless a matching
         graph has already been imported earlier according to 'has_graph' (which see).
         """
-        graph_action = self.determine_graph_action(file, alias=alias)
+        graph_action = self.determine_graph_action(file, alias=alias, reuse_only=reuse_only)
         if graph_action == 'reuse':
             if alias is not None:
                 # this allows us to do multiple renamings:

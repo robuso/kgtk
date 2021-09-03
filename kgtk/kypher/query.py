@@ -162,7 +162,7 @@ class KgtkQuery(object):
     def __init__(self, files, store, options=None, query=None,
                  match='()', where=None, optionals=None, with_=None,
                  ret='*', order=None, skip=None, limit=None,
-                 parameters={}, index='auto', force=False, loglevel=0):
+                 parameters={}, index='auto', force=False, reuse_only=False, loglevel=0):
         self.options = options or {}
         self.store = store
         self.loglevel = loglevel
@@ -170,6 +170,7 @@ class KgtkQuery(object):
         self.parameters = parameters
         self.defer_params = False
         self.index_mode = index.lower()
+        self.reuse_only = reuse_only
         
         if query is None:
             # supplying a query through individual clause arguments is a little bit easier,
@@ -213,7 +214,8 @@ class KgtkQuery(object):
             file = str(file) # in case we get a path object
             alias = self.get_input_option(file, 'alias')
             comment = self.get_input_option(file, 'comment')
-            store.add_graph(file, alias=alias)
+            reuse_only = self.get_input_option(file, 'reuse_only')
+            store.add_graph(file, alias=alias, reuse_only=reuse_only)
             # if we had an alias, use it for handle matching, otherwise use unnormalized file:
             self.files.append(alias or file)
             norm_file = store.get_normalized_file(file, alias=alias)
